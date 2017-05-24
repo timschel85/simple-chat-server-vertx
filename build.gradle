@@ -21,6 +21,7 @@ mainClassName = 'io.vertx.core.Launcher'
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     compile "io.vertx:vertx-core:$version"
+    compile "io.vertx:vertx-web:$version"
 }
 
 shadowJar {
