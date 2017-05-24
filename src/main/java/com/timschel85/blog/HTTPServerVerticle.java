@@ -4,7 +4,8 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.handler.sockjs.SockJSSocket;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.sockjs.*;
 
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,19 @@ public class HTTPServerVerticle extends AbstractVerticle {
         super.start();
 
         Logger logger = LoggerFactory.getLogger(HTTPServerVerticle.class);
+
+        Router SockJSRouter = Router.router(vertx);
+        SockJSHandlerOptions options = new SockJSHandlerOptions().setHeartbeatInterval(2000);
+        SockJSHandler sockJSHandler = SockJSHandler.create(vertx, options);
+        sockJSHandler.socketHandler(socket -> {
+           socket.handler(buffer -> {
+                logger.info("received data : " + buffer.toString());
+                socket.write(buffer);
+           });
+           socket.exceptionHandler(Throwable::printStackTrace);
+        });
+        SockJSRouter.route("/mySockJS").handler(sockJSHandler);
+
 
         vertx.createHttpServer()
             .requestHandler(req->{
@@ -43,9 +57,9 @@ public class HTTPServerVerticle extends AbstractVerticle {
                 req.bodyHandler(buffer-> {
                    logger.info("received data: " + buffer.toString());
                 });
-
                 req.response().setStatusCode(200).end("OK");
             })
+            .requestHandler(SockJSRouter::accept)
             .listen(8080, ar-> {
                 if(ar.succeeded())
                     logger.info("bind result : Success");
