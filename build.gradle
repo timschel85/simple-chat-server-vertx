@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '1.2.3'
+}
+
+group 'com.timschel85.blog'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots"
+    }
+}
+
+version = '3.4.1'
+sourceCompatibility = 1.8
+mainClassName = 'io.vertx.core.Launcher'
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile "io.vertx:vertx-core:$version"
+}
+
+shadowJar {
+    classifier = 'fat'
+    manifest {
+        attributes 'Main-Verticle': 'com.timschel85.blog.HTTPServerVerticle'
+    }
+    mergeServiceFiles {
+        include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.4.1'
+}
