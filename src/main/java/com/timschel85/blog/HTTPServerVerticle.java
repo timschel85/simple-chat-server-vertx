@@ -2,6 +2,7 @@ package com.timschel85.blog;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
@@ -21,7 +22,34 @@ public class HTTPServerVerticle extends AbstractVerticle {
 
         Logger logger = LoggerFactory.getLogger(HTTPServerVerticle.class);
 
-        Router SockJSRouter = Router.router(vertx);
+        Router router = Router.router(vertx);
+        router.route().handler(ctx -> {
+            HttpServerRequest req = ctx.request();
+            HttpMethod method = req.method();
+            String uri = req.uri();
+            String path = req.path();
+            String query= req.query();
+            logger.info("received http request: {method="+method+", uri="+uri+", path="+path+", query="+query+"}");
+
+            // Http request params
+            List<Map.Entry<String, String>> params = req.params().entries();
+            for(Map.Entry<String, String> param : params) {
+                logger.info("param["+param.getKey()+"] = "+param.getValue());
+            }
+
+            // Http request headers
+            List<Map.Entry<String, String>> headers = req.headers().entries();
+            for(Map.Entry<String, String> header : headers) {
+                logger.info("header["+header.getKey()+"] = "+header.getValue());
+            }
+
+            req.bodyHandler(buffer-> {
+               logger.info("received data: " + buffer.toString());
+            });
+
+            req.response().end("OK");
+        });
+
         SockJSHandlerOptions options = new SockJSHandlerOptions().setHeartbeatInterval(2000);
         SockJSHandler sockJSHandler = SockJSHandler.create(vertx, options);
         sockJSHandler.socketHandler(socket -> {
@@ -31,35 +59,11 @@ public class HTTPServerVerticle extends AbstractVerticle {
            });
            socket.exceptionHandler(Throwable::printStackTrace);
         });
-        SockJSRouter.route("/mySockJS").handler(sockJSHandler);
+        router.route("/mySockJS").handler(sockJSHandler);
 
 
         vertx.createHttpServer()
-            .requestHandler(req->{
-                HttpMethod method = req.method();
-                String uri = req.uri();
-                String path = req.path();
-                String query= req.query();
-                logger.info("received http request: {method="+method+", uri="+uri+", path="+path+", query="+query+"}");
-
-                // Http request params
-                List<Map.Entry<String, String>> params = req.params().entries();
-                for(Map.Entry<String, String> param : params) {
-                    logger.info("param["+param.getKey()+"] = "+param.getValue());
-                }
-
-                // Http request headers
-                List<Map.Entry<String, String>> headers = req.headers().entries();
-                for(Map.Entry<String, String> header : headers) {
-                    logger.info("header["+header.getKey()+"] = "+header.getValue());
-                }
-
-                req.bodyHandler(buffer-> {
-                   logger.info("received data: " + buffer.toString());
-                });
-                req.response().setStatusCode(200).end("OK");
-            })
-            .requestHandler(SockJSRouter::accept)
+            .requestHandler(router::accept)
             .listen(8080, ar-> {
                 if(ar.succeeded())
                     logger.info("bind result : Success");
