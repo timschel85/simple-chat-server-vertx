@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.sockjs.*;
 
 import java.util.List;
@@ -60,6 +61,7 @@ public class HTTPServerVerticle extends AbstractVerticle {
            socket.exceptionHandler(Throwable::printStackTrace);
         });
         router.route("/mySockJS/*").handler(sockJSHandler);
+        router.route("/chat").handler(StaticHandler.create());
 
 
         vertx.createHttpServer()
