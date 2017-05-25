@@ -23,7 +23,7 @@ public class HTTPServerVerticle extends AbstractVerticle {
         Logger logger = LoggerFactory.getLogger(HTTPServerVerticle.class);
 
         Router router = Router.router(vertx);
-        router.route().handler(ctx -> {
+        router.route("/").handler(ctx -> {
             HttpServerRequest req = ctx.request();
             HttpMethod method = req.method();
             String uri = req.uri();
@@ -59,7 +59,7 @@ public class HTTPServerVerticle extends AbstractVerticle {
            });
            socket.exceptionHandler(Throwable::printStackTrace);
         });
-        router.route("/mySockJS").handler(sockJSHandler);
+        router.route("/mySockJS/*").handler(sockJSHandler);
 
 
         vertx.createHttpServer()
