@@ -3,36 +3,94 @@
 <head>
     <meta charset="UTF-8"/>
     <title>simple-chat-client-web</title>
-    <script src="https://cdn.jsdelivr.net/sockjs/1/sockjs.min.js"></script>
+    <script src="https://code.jquery.com/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vertx/3.4.1/vertx-eventbus.js"></script>
     <script type="text/javascript">
-        var sock = new SockJS('http://localhost:8080/mySockJS');
-        sock.onopen = function () {
-            console.log('open')
+        var eb = null;
+        var subscribed = false;
+        var handler = function (error, json) {
+            $('#message-box').append(json.body+'\n')
         }
-        sock.onheartbeat = function () {
-            console.log('heartbeat')
-        }
-        sock.onmessage = function (e) {
-            console.log('message', e.data)
-            alert('received message echoed from server: ' + e.data)
-        }
-        sock.onclose = function () {
-            console.log('close')
-        }
-        function send(message) {
-            if (sock.readyState === SockJS.OPEN) {
-                console.log('sending message')
-                sock.send(message)
-            } else {
-                console.log('The socket is not open.')
+
+        $(document).ready(function () {
+            open()
+            $('#subscribe-btn').on('click', function () {
+                subscribe($('#address').val())
+            })
+            $('#unsubscribe-btn').on('click', function () {
+                unsubscribe($('#address').val())
+            })
+            $('#send-btn').on('click', function () {
+                publish($('#address').val(), $('#message').val())
+            })
+            $('#message').keypress(function (e) {
+                if (e.which == 13) {
+                    publish($('#address').val(), $('#message').val())
+                }
+            })
+        })
+
+        function open() {
+            if (!eb) {
+                eb = new EventBus('http://localhost:8080/eventbus')
+                eb.onopen = function () {
+                    console.log('open')
+                    $('#status-label').html('Status: connected')
+                }
+                eb.onclose = function () {
+                    console.log('close')
+                    $('#status-label').html('Status: Not connected')
+                }
+                
             }
-        }
+        } // open()
+
+        function close() {
+            if (eb) {
+                eb.close()
+            }
+        } // close()
+
+        function subscribe(address) {
+            if (eb && !subscribed) {
+                eb.registerHandler(address, handler)
+                subscribed = true
+                $('#status-label').html($('#status-label').html() + ', Subscribe: ' + address)
+            }
+        } // subscribe()
+
+        function unsubscribe(address) {
+            if (eb && subscribed) {
+                eb.unregisterHandler(address, handler)
+                subscribed = false
+                $('#status-label').html('Status: connected')
+            }
+        } // unsubscribe()
+
+        function publish(address, message) {
+            $('#message').val('');
+            $('#message').focus();
+
+            if (!subscribed) {
+                alert('Subscribe is required.')
+                return
+            }
+            if (eb && message.length > 0) {
+                eb.publish(address, message)
+            }
+        } // publish()
     </script>
 </head>
 <body>
-    <form onsubmit="return false;">
-        <input type="text" name="message" value="Hello, World!" />
-        <input type="button" value="Send SockJS data" onclick="send(this.form.message.value)" />
-    </form>
+    <div id="status-label">Status: Not connected</div>
+    <hr />
+    <label>Address: </label><input type="text" id="address" value="chat.server" />
+    <input type="button" id="subscribe-btn" value="Subscribe" />
+    <input type="button" id="unsubscribe-btn" value="Unsubscribe" />
+    <hr />
+    <textarea id="message-box" rows="20" cols="55"></textarea><br />
+    <label>Message: </label><input type="text" id="message" value="" size="40" />
+    <input type="button" id="send-btn" value="Send" />
 </body>
 </html>

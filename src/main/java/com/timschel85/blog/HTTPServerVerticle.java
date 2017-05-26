@@ -20,7 +20,6 @@ public class HTTPServerVerticle extends AbstractVerticle {
     @Override
     public void start() throws Exception {
         super.start();
-
         Logger logger = LoggerFactory.getLogger(HTTPServerVerticle.class);
 
         Router router = Router.router(vertx);
@@ -51,18 +50,14 @@ public class HTTPServerVerticle extends AbstractVerticle {
             req.response().end("OK");
         });
 
-        SockJSHandlerOptions options = new SockJSHandlerOptions().setHeartbeatInterval(2000);
-        SockJSHandler sockJSHandler = SockJSHandler.create(vertx, options);
-        sockJSHandler.socketHandler(socket -> {
-           socket.handler(buffer -> {
-                logger.info("received data : " + buffer.toString());
-                socket.write(buffer);
-           });
-           socket.exceptionHandler(Throwable::printStackTrace);
-        });
-        router.route("/mySockJS/*").handler(sockJSHandler);
+        SockJSHandlerOptions sockJSHandlerOptions = new SockJSHandlerOptions().setHeartbeatInterval(2000);
+        SockJSHandler sockJSHandler = SockJSHandler.create(vertx, sockJSHandlerOptions);
+        BridgeOptions bridgeOptions = new BridgeOptions()
+            .addInboundPermitted(new PermittedOptions().setAddress("chat.server"))
+            .addOutboundPermitted(new PermittedOptions().setAddress("chat.server"));
+        sockJSHandler.bridge(bridgeOptions);
+        router.route("/eventbus/*").handler(sockJSHandler);
         router.route("/chat").handler(StaticHandler.create());
-
 
         vertx.createHttpServer()
             .requestHandler(router::accept)
